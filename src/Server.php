@@ -16,14 +16,21 @@ class Server extends EventEmitter implements ServerInterface
         $this->loop = $loop;
     }
 
-    public function listen($port, $host = '127.0.0.1')
+    public function listen($port, $host = '127.0.0.1', $backlog = SOMAXCONN)
     {
         if (strpos($host, ':') !== false) {
             // enclose IPv6 addresses in square brackets before appending port
             $host = '[' . $host . ']';
         }
 
-        $this->master = @stream_socket_server("tcp://$host:$port", $errno, $errstr);
+        $socketContext = stream_context_create(array(
+            'socket' => array(
+                'bindto' => "tcp://$host:$port",
+                'backlog' => $backlog,
+            ),
+        ));
+
+        $this->master = @stream_socket_server($socketContext, $errno, $errstr);
         if (false === $this->master) {
             $message = "Could not bind to tcp://$host:$port: $errstr";
             throw new ConnectionException($message, $errno);
